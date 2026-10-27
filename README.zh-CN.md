@@ -1,165 +1,70 @@
-# LoopLab · Agent Retry Observer
+# agent-correcttion-loop
+
+**LoopLab · Agent Retry Observer**
 
 [English](README.md) · **简体中文**
 
-一个本地运行的 Agent 重试观察面板，把每次纠正转化为有实际验证证据的工程改进。
+一个让 Agent 重试过程可见的本地面板，将每次纠正转化为有验证证据的工程改进。
 
-LoopLab 将 **执行 → 失败 → 重试 → 结果 → 纠正 → 验证** 串起来：既能检查执行中发生了什么，也能记录哪些代码或检查能够防止同类错误继续传播。
+![LoopLab 重试追踪面板](docs/screenshots/retry-trace.png)
 
-使用 Python 标准库和原生 HTML / CSS / JavaScript。需要 Python 3.10+，无需第三方依赖、API Key 或前端构建。当前面板为简体中文。
+*演示流程：两次模拟失败后重试成功。面板显示实际记录的本地事件，不代表生产业务流量。*
 
-<!-- 截图添加后取消下方注释：
-![LoopLab 面板](docs/screenshots/overview.png)
--->
+## 能做什么
 
-## 为什么做这个项目
+- **观察重试**：查看执行步骤、每次尝试、错误、耗时和最终结果。
+- **沉淀工程经验**：关联问题、根因、代码改动、防复发机制和验证证据。
+- **形成纠错闭环**：执行 → 失败 → 纠正 → 工程约束 → 验证。
 
-Agent 说“修好了”不能代替验证，记录一句“记得加超时”也不会自动形成约束。
+## 本地启动
 
-LoopLab 提供两个模块：
-
-- **重试追踪**：查看已接入观测的步骤、每次尝试、错误、耗时和最终状态。
-- **工程记忆**：记录现象、根因、防复发层、关联代码与实际验证证据。
-
-目标是持续改进 Agent 工作的工程环境。笔记能保存经验，代码结构和自动检查才能让经验真正生效。
-
-## 快速开始
-
-在项目根目录打开终端：
+需要 **Python 3.10+**。下载或克隆仓库，在项目根目录打开终端，运行：
 
 ```bash
 python server.py
 ```
 
-打开 [http://127.0.0.1:8765](http://127.0.0.1:8765)，再在第二个终端运行：
+打开 [http://127.0.0.1:8765](http://127.0.0.1:8765)。无需第三方依赖、API Key 或前端构建。
 
-```bash
-python demo.py
-```
-
-演示会实际执行异步函数，前两次主动抛出**模拟的限流错误**，第三次成功，并向本地服务发送真实事件。记录带有 `DEMO` 标识，不代表生产业务证据。追踪页面每 4 秒刷新一次。
-
-## 接入自己的调用
-
-仅对适合安全重试的操作使用包装器：
-
-```python
-from agent_observer import AgentTracer, observed_retry
-
-tracer = AgentTracer("my-workflow").start()
-try:
-    result = observed_retry(
-        call_tool,  # 你的可调用函数，需在此之前定义。
-        tracer,
-        "tool:search",
-        max_attempts=3,
-        delay_s=0.3,
-        retryable=(TimeoutError,),
-    )
-except Exception:
-    tracer.finish("failed")
-    raise
-else:
-    tracer.finish("succeeded")
-```
-
-异步调用使用 `observed_retry_async`。这些包装器会真的执行重试，需要明确可重试异常、间隔以及操作的幂等性。
-
-如果框架已有重试策略，请在现有的每次尝试前后接入事件，避免增加第二层重试：
-
-```python
-tracer = AgentTracer("existing-workflow").start()
-tracer.emit("step_started", step="tool:search")
-tracer.emit("attempt_started", step="tool:search", attempt=1)
-# 在这里执行现有调用，再根据实际结果发送：
-# attempt_failed / attempt_succeeded，最后发送 step_finished。
-# 结束时调用 tracer.finish("succeeded") 或 tracer.finish("failed")。
-```
+如需查看演示数据，在第二个终端运行 `python demo.py`。限流错误由演示主动模拟，记录带有 **DEMO** 标识。当前界面为简体中文。
 
 ## 工程记忆
 
-打开面板中的 **工程记忆**，可以新增、编辑、搜索、筛选记录，以及复制 Markdown。每条记忆包含：
+在一条记录中串起 **问题 → 根因 → 防复发层 → 代码 → 验证证据**，支持编辑、搜索、筛选和复制 Markdown。
 
-- 具体问题和根因。
-- 防复发层：Codebase、Static Analysis、Rules / BugBot、Skills 或 Style Guide。
-- 实际实现的约束、关联代码与验证证据。
-- 待验证或已验证状态。
+![包含两条已验证纠错记录的工程记忆面板](docs/screenshots/engineering-memory.png)
 
-后端会拒绝将空证据的新建或编辑记录标为“已验证”。**证据非空不等于证据真实**：LoopLab 不会自动执行记录中填写的命令，也不会自动迁移历史记录。
+后端拒绝把空证据记录标为“已验证”。非空文本仍需核实真实性；保存一条笔记，也不代表代码约束已经落实。
 
-## 从纠正走向工程约束
+## 项目背后的思路
 
-项目受到 [@poteto 分享的原视频](https://x.com/poteto/status/2102050467505430555) 启发。核心是按下面的顺序思考改进：
+受到 [@poteto 分享的原视频](https://x.com/poteto/status/2102050467505430555) 启发：每次纠正 Agent 时，按下面的顺序考虑如何改进环境。
 
-| 层次 | 主要作用 |
+| 优先级 | 关注点 |
 | --- | --- |
-| **1. Codebase** | 用更安全的 API、数据结构与模块边界，让正确路径更容易被采用。 |
-| **2. Static Analysis** | 用 lint、编译器与依赖检查落实可机械识别的约束；CI 可以负责运行这些检查。 |
-| **3. Rules / BugBot** | 通过行为指导与自动审查辅助语义判断，但执行与覆盖并不绝对可靠。 |
-| **4. Skills** | 沉淀可重复流程、应用控制工具与功能地图，支持实际验证。 |
-| **5. Style Guide** | 保存设计约定；如果仅靠人工记忆和审查落实，约束较弱。 |
+| **1. Codebase** | 用安全的 API、数据结构和边界，让正确路径更容易走。 |
+| **2. Static Analysis** | 通过 lint、编译器和依赖检查落实可机械识别的约束。 |
+| **3. Rules / BugBot** | 补充行为指导与自动审查。 |
+| **4. Skills** | 让应用控制和验证流程可重复执行。 |
+| **5. Style Guide** | 保存团队约定，避免仅靠审查者的记忆。 |
 
-这是选择有效改进的优先级，不是要求每个任务都新增五层配置。运行时测试可以补充静态分析，但两者不能混为一谈。
+LoopLab 是基于这些思想的独立实践，不是演讲者的原版产品，也不代表官方关联。详见[视频总结](docs/video-notes.md)。
 
-详见 [视频总结](docs/video-notes.md) 和 [功能地图](docs/feature-map.md)。LoopLab 是基于视频思想的独立实验，不是演讲者的原版实现，也不代表官方关联。本仓库以本地应用的形式发布，不再作为可安装的 Agent skill 分发。
+## 一次实际纠错
 
-## 验证
+本地实践发现：没有验证证据的记忆也能被标为已验证。将校验放到后端共享入口后，新建和编辑都受到约束；同一套 HTTP 检查从 **2/6 提升到 6/6**，扩展后的单元测试 **9/9 通过**。具体范围与局限见[验证说明](docs/verification.md)。
 
-在根目录运行单元测试：
+<details>
+<summary>查看面板内的接入指南</summary>
 
-```bash
-python -X utf8 -m unittest discover -s tests -v
-```
+![LoopLab 接入指南](docs/screenshots/integration-guide.png)
 
-HTTP 验证需要使用独立数据目录启动另一份实例。PowerShell 示例：
+</details>
 
-```powershell
-# 终端 A，项目根目录
-$env:OBSERVER_DATA_DIR = Join-Path (Get-Location).Path '.local/verification-data'
-$env:OBSERVER_PORT = '8766'
-python -X utf8 server.py
+## 更多说明与能力边界
 
-# 终端 B，项目根目录
-python -X utf8 scripts/verify_memory_evidence.py --url http://127.0.0.1:8766 --output .local/verification/http.json
-```
-
-macOS / Linux 的独立实例启动命令：
-
-```bash
-OBSERVER_DATA_DIR=.local/verification-data OBSERVER_PORT=8766 python server.py
-```
-
-HTTP 检查会创建验收专用记忆，验证六项契约，并保存真实响应与追踪。请使用专用实例，不要指向保存日常笔记的目录。详见 [验证方法与实测结果](docs/verification.md)。
-
-## 目录
-
-```text
-.
-├── server.py                       # 本地 HTTP 接口与静态页面服务
-├── demo.py                         # 明确标记的模拟重试场景
-├── agent_observer/                 # Tracer 与同步 / 异步重试包装器
-├── static/                         # 面板 HTML、CSS、JavaScript
-├── scripts/verify_memory_evidence.py
-├── tests/test_core.py
-├── examples/                       # 假设性、待验证的记忆示例
-├── docs/
-│   ├── video-notes.md
-│   ├── feature-map.md
-│   ├── verification.md
-│   └── screenshots/                # 可在此补充截图
-├── README.md
-└── README.zh-CN.md
-```
-
-运行后默认将追踪与记忆写入 `data/`。通过 `OBSERVER_DATA_DIR` 隔离不同项目，通过 `OBSERVER_PORT` 更改端口；相对数据路径从当前工作目录解析。`.gitignore` 默认排除 `data/`、`.local/`、`work/` 和本地环境文件。如需版本管理某条记忆，请先检查内容，再导出到明确用于共享的位置。
-
-## 能力边界
-
-- 只能观察显式接入事件的调用，不能自动捕获 Codex、Claude 或其他框架隐藏的内部重试。
-- 当前没有完整主 / 子 Agent 树、逐行代码归属或自动影响分析。
-- 服务仅监听 `127.0.0.1`，没有身份认证，应保持本地使用。
-- 事件发送采用短超时，并忽略发送错误，不属于完整、防篡改的审计日志。
-- 不要将密钥、完整 Prompt 和业务隐私放入事件或共享导出内容。
-- 执行可见不代表功能、性能和代码质量已经验证，需要对应的检查证据。
-
-截图可放入 `docs/screenshots/`；添加 `overview.png` 后，取消本文开头图片块的注释即可展示。
+- [功能地图](docs/feature-map.md) · [验证说明](docs/verification.md) · [视频总结](docs/video-notes.md)
+- 只能观察显式接入事件的调用，不能自动捕获隐藏重试、完整 Agent 树或逐行代码归属。
+- 服务仅供本地使用，没有身份认证；不要把密钥或业务隐私写入记录与共享导出。
+- 看见 trace 不等于功能或性能已验证。事件发送错误可能被忽略，因此不是完整审计日志。
+- 运行数据默认保存在 `data/`，不上传 Git；可用 `OBSERVER_DATA_DIR` 和 `OBSERVER_PORT` 配置目录与端口。
