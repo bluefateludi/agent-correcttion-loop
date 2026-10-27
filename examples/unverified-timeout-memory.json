@@ -1,0 +1,11 @@
+{
+  "title": "示例：Tool Calling 缺少 Timeout",
+  "project": "Example project (假设性示例，并非真实验证记录)",
+  "layer": "Codebase",
+  "symptom": "假设性场景：某个工具一直没有响应，导致上层工作流等待。",
+  "root_cause": "未排查：可能缺少统一的执行入口或超时机制。",
+  "enforcement": "拟通过 ToolExecutor 统一配置超时，并用检查阻止绕过入口。",
+  "code_path": "(尚未改动)",
+  "verification": "未执行任何测试；不可标记已验证。",
+  "status": "unverified"
+}

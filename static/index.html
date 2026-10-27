@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LoopLab · Agent Retry Observer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-icon">⌘</span><div><strong>looplab<span class="brand-dot">.</span></strong><small>AGENT RELIABILITY</small></div></div>
+    <div class="nav-label">WORKSPACE</div>
+    <nav>
+      <button class="nav-item active" data-tab="traces"><span class="nav-glyph">◈</span> Retry Traces <span class="nav-count" id="navRuns">0</span></button>
+      <button class="nav-item" data-tab="memory"><span class="nav-glyph">▤</span> 工程记忆 <span class="nav-count" id="navMem">0</span></button>
+      <button class="nav-item" data-tab="guide"><span class="nav-glyph">⌘</span> 接入指南</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="connection"><span class="pulse"></span><span>LOCAL OBSERVER</span><span class="connection-ok">ONLINE</span></div>
+      <p>观察、验证、沉淀。<br>不再重复纠正同一个错误。</p>
+      <span class="edition">MVP / v0.1 · Local only</span>
+    </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumbs"><span>Workspace</span><span class="chev">/</span><strong id="crumb">Retry Traces</strong></div><div class="top-meta"><span class="clock" id="clock"></span><span class="avatar">AI</span></div></header>
+    <main>
+      <section class="page active" id="page-traces">
+        <div class="page-intro"><div><div class="eyebrow"><span class="line"></span> OBSERVABILITY / RETRY INTELLIGENCE</div><h1>看得见的每一次重试<span class="period">.</span></h1><p>从失败到恢复，让 Agent 的执行过程留下可以检查的证据。</p></div><button id="refreshBtn" class="btn ghost"><span>↻</span> 刷新追踪</button></div>
+        <div class="stats">
+          <div class="stat"><div class="stat-icon cyan">↗</div><small>RUNS / 执行批次</small><div id="statRuns" class="stat-num">0</div><div class="stat-foot">所有已捕获运行</div></div>
+          <div class="stat"><div class="stat-icon orange">⟲</div><small>ATTEMPTS / 执行尝试</small><div id="statAttempts" class="stat-num">0</div><div class="stat-foot">包含所有重试尝试</div></div>
+          <div class="stat"><div class="stat-icon rose">!</div><small>FAILED ATTEMPTS</small><div id="statFailures" class="stat-num">0</div><div class="stat-foot">失败尝试次数</div></div>
+          <div class="stat"><div class="stat-icon mint">✓</div><small>RECOVERY / 恢复运行</small><div id="statRecovery" class="stat-num">0</div><div class="stat-foot">曾失败但最终成功</div></div>
+        </div>
+        <div class="panel-grid">
+          <div class="panel run-panel"><div class="panel-header"><div><div class="panel-tag">01 / RUN HISTORY</div><h2>执行记录</h2></div><span class="live-marker"><span class="pulse"></span> LIVE</span></div><div class="run-list" id="runList"><div class="empty small">尚无运行记录</div></div><div class="panel-footer">每 4 秒自动同步一次 · 最多显示 120 条</div></div>
+          <div class="panel detail-panel"><div class="panel-header"><div><div class="panel-tag">02 / EXECUTION PATH</div><h2 id="detailTitle">选择一条执行记录</h2><p class="panel-sub" id="detailSub">查看节点、每次尝试以及失败与恢复</p></div><span class="id-chip" id="runId">TRACE</span></div><div id="traceFlow" class="trace-flow"><div class="empty-illustration"><div class="orb">◎</div><strong>还没有可显示的执行链路</strong><p>请先运行示例，或把 observer 接到真实 Agent 的调用入口。</p><code>python demo.py</code></div></div><div class="events"><div class="events-head"><span>EVENT STREAM</span><span id="eventsCount">0 EVENTS</span></div><div id="eventList" class="event-list"><p class="hint">等待事件...</p></div></div></div>
+        </div>
+      </section>
+      <section class="page" id="page-memory">
+        <div class="page-intro"><div><div class="eyebrow"><span class="line"></span> CODEBASE AS MEMORY</div><h1>让纠正变成资产<span class="period">.</span></h1><p>沉淀错误、根因、长期约束和实际验证。记录不是强制规则，工程实现才是。</p></div><button class="btn primary" id="newMemoryBtn">＋ 新建工程记忆</button></div>
+        <div class="memory-summary"><div><span class="memory-summary-icon">▤</span><strong>Engineering Memory</strong><p>持久化目录：<code>data/memory/*.json</code>；可复制 Markdown 到项目代码库。</p></div><span class="memory-side" id="memCount">0 ENTRIES</span></div>
+        <div class="memory-toolbar"><div class="search-box">⌕ <input id="memorySearch" placeholder="搜索问题、根因、项目、文件路径..." autocomplete="off"></div><select id="layerFilter"><option value="">全部约束层</option><option>Codebase</option><option>Static Analysis</option><option>Rules / BugBot</option><option>Skills</option><option>Style Guide</option></select></div>
+        <div id="memoryList" class="memory-list"><div class="empty small">尚无工程记忆，创建第一条吧。</div></div>
+      </section>
+      <section class="page" id="page-guide">
+        <div class="page-intro"><div><div class="eyebrow"><span class="line"></span> GET STARTED</div><h1>从一个工具调用开始<span class="period">.</span></h1><p>先接入自己控制的 Agent 代码，再逐步扩展到 LangGraph 等工作流。</p></div></div>
+        <div class="guide-cols"><div class="panel guide-panel"><div class="stepno">STEP 01</div><h2>启动本地面板</h2><p>仅监听 127.0.0.1，追踪存储在 SQLite，工程记忆存储在 JSON 文件。</p><pre><code>python server.py</code></pre><div class="stepno">STEP 02</div><h2>运行真实重试示例</h2><p>这个脚本真的会先遇到两次模拟 429，再在第三次调用成功。不是 UI 假动画。</p><pre><code>python demo.py</code></pre><div class="note">提示：先打开两个终端。终端 A 启动面板，终端 B 运行 demo。</div></div>
+        <div class="panel guide-panel"><div class="stepno">STEP 03</div><h2>接入自己的 Agent</h2><p>使用可观测重试包装器，或在已有重试逻辑里调用 tracer.emit()。不要给有副作用且不幂等的调用随意增加重试。</p><pre><code>from agent_observer import (
+  AgentTracer, observed_retry_async
+)
+
+tracer = AgentTracer("my-agent").start()
+try:
+  result = await observed_retry_async(
+    call_tool, tracer, "search-tool",
+    max_attempts=3,
+    retryable=(TimeoutError,)
+  )
+except Exception:
+  tracer.finish("failed")
+  raise
+else:
+  tracer.finish("succeeded")</code></pre><div class="note">观测插件只能记录接入了事件钩子的执行，不能自动读取 Codex、Claude 或第三方服务内部不可见的重试。</div></div></div>
+        <div class="flow-philosophy"><div class="eyebrow">THE LEARNING LOOP</div><div class="philosophy-steps"><div>① 发生错误</div><span>→</span><div>② 捕获 Trace</div><span>→</span><div>③ 找到根因</div><span>→</span><div>④ 加工程约束</div><span>→</span><div>⑤ 验证并留证</div></div><p>工程记忆中的“已验证”需要有对应的真实测试或证据；保存一条笔记不等于改变了 Codebase。</p></div>
+      </section>
+    </main>
+  </div>
+</div>
+<dialog id="memoryDialog"><form id="memoryForm" class="memory-form"><div class="modal-header"><div><div class="panel-tag">NEW / ENGINEERING MEMORY</div><h2 id="modalTitle">新增工程记忆</h2></div><button type="button" id="closeDialog" class="close" aria-label="关闭">×</button></div><div class="form-grid"><label>标题 *<input name="title" maxlength="120" required placeholder="例如：Tool Calling 未配置超时"></label><label>项目<input name="project" maxlength="100" placeholder="例如：SlideForge"></label><label>约束层 *<select name="layer" required><option>Codebase</option><option>Static Analysis</option><option>Rules / BugBot</option><option>Skills</option><option>Style Guide</option></select></label><label>验证状态<select name="status"><option value="unverified">待验证</option><option value="verified">已验证</option></select></label></div><label>错误现象<textarea name="symptom" rows="2" placeholder="具体发生了什么？如何复现？"></textarea></label><label>根因<textarea name="root_cause" rows="2" placeholder="已证实的根因；没有证据就写待调查"></textarea></label><label>防复发机制<textarea name="enforcement" rows="2" placeholder="例如：抽取 ToolExecutor 统一超时并禁止业务层直接调用"></textarea></label><label>关联代码 / 规则 / 测试路径<input name="code_path" maxlength="350" placeholder="例如：src/agent/tool_executor.py"></label><label>验证命令与证据<textarea name="verification" rows="2" placeholder="例如：pytest tests/test_timeout.py — PASS；未执行则注明"></textarea></label><div class="modal-actions"><button type="button" class="btn ghost" id="cancelDialog">取消</button><button class="btn primary" type="submit" id="saveMemory">保存记录</button></div><p id="formError" class="form-error"></p></form></dialog>
+<script src="/static/app.js"></script>
+</body>
+</html>
