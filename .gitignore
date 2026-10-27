@@ -1,0 +1,20 @@
+# Private source material, archived drafts and local verification artifacts.
+/.local/
+/work/
+/data/
+/reports/
+
+# Python and runtime databases.
+__pycache__/
+*.pyc
+.pytest_cache/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Local environment and operating system files.
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
